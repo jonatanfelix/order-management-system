@@ -126,7 +126,7 @@ export default async function TemplatesPage() {
                       <SelectValue placeholder="Pilih kategori" />
                     </SelectTrigger>
                     <SelectContent>
-                      {categories.map((category: any) => (
+                      {(categories || []).map((category: any) => (
                         <SelectItem key={category.id} value={category.id}>
                           {category.name}
                         </SelectItem>
@@ -150,7 +150,7 @@ export default async function TemplatesPage() {
 
         {/* Templates List */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {templates.map((template: any) => (
+          {(templates || []).map((template: any) => (
             <Card key={template.id} className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -188,7 +188,7 @@ export default async function TemplatesPage() {
           ))}
         </div>
 
-        {templates.length === 0 && (
+        {(!templates || templates.length === 0) && (
           <Card>
             <CardContent className="text-center py-12">
               <h3 className="text-lg font-semibold text-slate-900 mb-2">
