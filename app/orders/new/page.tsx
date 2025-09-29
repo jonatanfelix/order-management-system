@@ -38,8 +38,8 @@ export default async function NewOrderPage() {
 
   // Get templates for each category
   const { data: templates = [] } = await supabase
-    .from('process_templates')
-    .select('id, name, category_id, estimated_duration')
+    .from('templates')
+    .select('id, name, code, category_id, description')
     .order('name')
 
   return (
@@ -97,16 +97,16 @@ export default async function NewOrderPage() {
               <div className="space-y-2">
                 <Label htmlFor="category">Kategori *</Label>
                 <Select name="category_id" required>
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-white border-2 border-slate-300">
                     <SelectValue placeholder="Pilih kategori pesanan" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white shadow-lg">
                     {(categories || []).map((category: any) => (
                       <SelectItem key={category.id} value={category.id}>
-                        <div>
-                          <div className="font-medium">{category.name}</div>
+                        <div className="p-2 rounded-md bg-slate-50 border border-slate-200">
+                          <div className="font-semibold text-slate-800">{category.name}</div>
                           {category.description && (
-                            <div className="text-sm text-gray-500">{category.description}</div>
+                            <div className="text-xs text-slate-600">{category.description}</div>
                           )}
                         </div>
                       </SelectItem>
@@ -118,17 +118,17 @@ export default async function NewOrderPage() {
               {/* Template */}
               <div className="space-y-2">
                 <Label htmlFor="template">Template Proses *</Label>
-                <Select name="process_template_id" required>
-                  <SelectTrigger>
+                <Select name="template_id" required>
+                  <SelectTrigger className="bg-white border-2 border-slate-300">
                     <SelectValue placeholder="Pilih template proses" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white shadow-lg">
                     {(templates || []).map((template: any) => (
                       <SelectItem key={template.id} value={template.id}>
-                        <div>
-                          <div className="font-medium">{template.name}</div>
-                          <div className="text-sm text-gray-500">
-                            Estimasi: {template.estimated_duration} hari
+                        <div className="p-2 rounded-md bg-slate-50 border border-slate-200">
+                          <div className="font-semibold text-slate-800">{template.name}</div>
+                          <div className="text-xs text-slate-600">
+                            {template.code} - {template.description || 'Template proses standar'}
                           </div>
                         </div>
                       </SelectItem>

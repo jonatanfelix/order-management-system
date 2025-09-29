@@ -164,6 +164,13 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
             </div>
             
             <div className="flex items-center space-x-2">
+              {/* Gantt Chart Button */}
+              <Button variant="outline" size="sm" asChild>
+                <Link href={`/orders/${params.id}/gantt`}>
+                  📊 Timeline
+                </Link>
+              </Button>
+              
               {publicShare && (
                 <Button variant="outline" size="sm" asChild>
                   <Link href={`/share/${publicShare.share_code}`} target="_blank">
