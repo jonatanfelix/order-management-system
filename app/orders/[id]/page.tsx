@@ -7,7 +7,9 @@ import { Separator } from '@/components/ui/separator'
 import { Progress } from '@/components/ui/progress'
 import Link from 'next/link'
 import { ArrowLeftIcon, CalendarIcon, ClockIcon, UserIcon, ShareIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline'
-import { submitForApproval, approveRejectOrder } from '@/lib/actions/orders'
+import { TaskGanttPreview } from '@/components/task-gantt-preview'
+import { TaskStep } from '@/types/task'
+import { submitForApproval, approveRejectOrder } from '@/lib/actions/approval'
 
 interface OrderDetailPageProps {
   params: {
@@ -41,9 +43,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
     .select(`
       *,
       categories (name, description),
-      profiles!orders_input_staff_id_fkey (full_name, email),
-      profiles!orders_approval_staff_id_fkey (full_name, email),
-      process_templates (name, estimated_duration)
+      profiles!orders_created_by_fkey (name, email)
     `)
     .eq('id', params.id)
     .single()
@@ -52,17 +52,23 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
     notFound()
   }
 
-  // Check if user has permission to view this order
-  if (profile.role === 'INPUT_STAFF' && order.input_staff_id !== user.id) {
-    redirect('/orders')
-  }
-
-  // Get order steps
-  const { data: steps = [] } = await supabase
-    .from('order_steps')
+  // Get order tasks if this is a task-based order
+  const { data: tasks = [] } = await supabase
+    .from('order_tasks')
     .select('*')
     .eq('order_id', params.id)
-    .order('step_order')
+    .order('task_order')
+
+  // Get order steps for traditional orders
+  let steps: any[] = []
+  if (!order.is_task_based) {
+    const { data: stepsData = [] } = await supabase
+      .from('order_steps')
+      .select('*')
+      .eq('order_id', params.id)
+      .order('step_order')
+    steps = stepsData || []
+  }
 
   // Get order adjustments
   const { data: adjustments = [] } = await supabase
@@ -82,9 +88,20 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
     .single()
 
   // Calculate progress
+  const isTaskBased = order.is_task_based
   const stepsList = steps || []
-  const completedSteps = stepsList.filter(step => step.status === 'COMPLETED').length
-  const progressPercentage = stepsList.length > 0 ? (completedSteps / stepsList.length) * 100 : 0
+  const tasksList = tasks || []
+  
+  let progressPercentage = 0
+  if (isTaskBased) {
+    // For task-based orders, use task progress
+    const totalProgress = tasksList.reduce((sum, task) => sum + (task.progress || 0), 0)
+    progressPercentage = tasksList.length > 0 ? totalProgress / tasksList.length : 0
+  } else {
+    // For traditional orders, use completed steps
+    const completedSteps = stepsList.filter(step => step.status === 'COMPLETED').length
+    progressPercentage = stepsList.length > 0 ? (completedSteps / stepsList.length) * 100 : 0
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -131,9 +148,9 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
     }
   }
 
-  const canApprove = (profile.role === 'ADMIN' || profile.role === 'APPROVAL_STAFF') && order.status === 'PENDING'
-  const canSubmitForApproval = profile.role === 'INPUT_STAFF' && order.input_staff_id === user.id && order.status === 'DRAFT'
-  const isOverdue = order.eta && new Date(order.eta) < new Date() && order.status !== 'COMPLETED'
+  const canApprove = (profile.role === 'ADMIN' || profile.role === 'APPROVER') && order.status === 'PENDING_APPROVAL'
+  const canSubmitForApproval = (profile.role === 'ADMIN' || profile.role === 'INPUTER') && order.created_by === user.id && order.status === 'DRAFT'
+  const isOverdue = order.estimated_end_date && new Date(order.estimated_end_date) < new Date() && order.status !== 'APPROVED'
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -275,45 +292,73 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
             {/* Progress Tracking */}
             <Card>
               <CardHeader>
-                <CardTitle>Progress Pengerjaan</CardTitle>
+                <CardTitle>
+                  {isTaskBased ? 'Timeline & Progress Tasks' : 'Progress Pengerjaan'}
+                </CardTitle>
                 <CardDescription>
-                {completedSteps} dari {stepsList.length} tahap selesai ({Math.round(progressPercentage)}%)
+                  {isTaskBased 
+                    ? `${tasksList.length} tasks - Progress rata-rata ${Math.round(progressPercentage)}%`
+                    : `${stepsList.filter((s: any) => s.status === 'COMPLETED').length} dari ${stepsList.length} tahap selesai (${Math.round(progressPercentage)}%)`
+                  }
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <Progress value={progressPercentage} className="w-full" />
                 
-                <div className="space-y-3">
-                  {stepsList.map((step: any, index: number) => (
-                    <div key={step.id} className="flex items-center space-x-3">
-                      <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                        step.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
-                        step.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {index + 1}
+                {isTaskBased ? (
+                  // Task-based Gantt chart
+                  <div className="mt-6">
+                    <TaskGanttPreview 
+                      tasks={tasksList.map((task: any) => ({
+                        id: task.id,
+                        name: task.name,
+                        startDate: new Date(task.start_date),
+                        endDate: new Date(task.end_date),
+                        duration: task.duration_days,
+                        pic: task.pic || '',
+                        quantity: task.quantity,
+                        unit: task.unit,
+                        progress: task.progress,
+                        dependsOn: task.depends_on_tasks || [],
+                        isMilestone: task.is_milestone,
+                        notes: task.notes
+                      } as TaskStep))}
+                    />
+                  </div>
+                ) : (
+                  // Traditional step-based progress
+                  <div className="space-y-3">
+                    {stepsList.map((step: any, index: number) => (
+                      <div key={step.id} className="flex items-center space-x-3">
+                        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                          step.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
+                          step.status === 'IN_PROGRESS' ? 'bg-blue-100 text-blue-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {index + 1}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-900">{step.name}</p>
+                          {step.description && (
+                            <p className="text-sm text-gray-600">{step.description}</p>
+                          )}
+                          {step.estimated_hours && (
+                            <p className="text-xs text-gray-500">Estimasi: {step.estimated_hours} jam</p>
+                          )}
+                        </div>
+                        <Badge variant={
+                          step.status === 'COMPLETED' ? 'default' :
+                          step.status === 'IN_PROGRESS' ? 'secondary' :
+                          'outline'
+                        }>
+                          {step.status === 'COMPLETED' ? 'Selesai' :
+                           step.status === 'IN_PROGRESS' ? 'Proses' :
+                           'Menunggu'}
+                        </Badge>
                       </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900">{step.name}</p>
-                        {step.description && (
-                          <p className="text-sm text-gray-600">{step.description}</p>
-                        )}
-                        {step.estimated_hours && (
-                          <p className="text-xs text-gray-500">Estimasi: {step.estimated_hours} jam</p>
-                        )}
-                      </div>
-                      <Badge variant={
-                        step.status === 'COMPLETED' ? 'default' :
-                        step.status === 'IN_PROGRESS' ? 'secondary' :
-                        'outline'
-                      }>
-                        {step.status === 'COMPLETED' ? 'Selesai' :
-                         step.status === 'IN_PROGRESS' ? 'Proses' :
-                         'Menunggu'}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -371,7 +416,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                   </div>
                 </div>
 
-                {order.eta && (
+                {(order.eta || order.estimated_end_date) && (
                   <div className="flex items-center space-x-3">
                     <ClockIcon className={`h-5 w-5 ${isOverdue ? 'text-red-500' : 'text-blue-500'}`} />
                     <div>
@@ -379,11 +424,39 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                         ETA {isOverdue && <span className="text-red-600">(Terlambat)</span>}
                       </p>
                       <p className={`text-sm ${isOverdue ? 'text-red-600' : 'text-gray-600'}`}>
-                        {new Date(order.eta).toLocaleDateString('id-ID', {
+                        {new Date(order.eta || order.estimated_end_date).toLocaleDateString('id-ID', {
                           year: 'numeric',
                           month: 'long',
                           day: 'numeric'
                         })}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                
+                {isTaskBased && order.estimated_start_date && (
+                  <div className="flex items-center space-x-3">
+                    <CalendarIcon className="h-5 w-5 text-green-500" />
+                    <div>
+                      <p className="font-medium text-gray-900">Mulai Estimasi</p>
+                      <p className="text-sm text-gray-600">
+                        {new Date(order.estimated_start_date).toLocaleDateString('id-ID', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                
+                {isTaskBased && order.total_duration_days && (
+                  <div className="flex items-center space-x-3">
+                    <ClockIcon className="h-5 w-5 text-purple-500" />
+                    <div>
+                      <p className="font-medium text-gray-900">Total Durasi</p>
+                      <p className="text-sm text-gray-600">
+                        {order.total_duration_days} hari kerja
                       </p>
                     </div>
                   </div>
@@ -416,17 +489,18 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                 <div className="flex items-center space-x-3">
                   <UserIcon className="h-5 w-5 text-gray-400" />
                   <div>
-                    <p className="font-medium text-gray-900">Input Staff</p>
-                    <p className="text-sm text-gray-600">{order.profiles?.full_name}</p>
+                    <p className="font-medium text-gray-900">Dibuat oleh</p>
+                    <p className="text-sm text-gray-600">{order.profiles?.name || 'Unknown'}</p>
                   </div>
                 </div>
-
-                {order.profiles && (
-                  <div className="flex items-center space-x-3">
-                    <CheckCircleIcon className="h-5 w-5 text-green-500" />
-                    <div>
-                      <p className="font-medium text-gray-900">Approval Staff</p>
-                      <p className="text-sm text-gray-600">{order.profiles?.full_name}</p>
+                
+                {isTaskBased && tasksList.length > 0 && (
+                  <div className="mt-4">
+                    <p className="font-medium text-gray-900 mb-2">PIC Tasks:</p>
+                    <div className="space-y-1">
+                      {[...new Set(tasksList.map((t: any) => t.pic).filter(Boolean))].map((pic: string) => (
+                        <Badge key={pic} variant="outline" className="mr-1">{pic}</Badge>
+                      ))}
                     </div>
                   </div>
                 )}
