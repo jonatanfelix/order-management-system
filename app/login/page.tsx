@@ -47,6 +47,23 @@ export default function LoginPage() {
             </Button>
           </form>
           
+          {/* Guest Mode Button */}
+          <div className="mt-4">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-slate-300" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-slate-500">atau</span>
+              </div>
+            </div>
+            <Button asChild variant="outline" className="w-full mt-4 border-2 border-green-300 text-green-700 hover:bg-green-50">
+              <a href="/guest/gantt">
+                🌐 Mode Guest - Buat Timeline Tanpa Login
+              </a>
+            </Button>
+          </div>
+          
           <div className="mt-6 text-center">
             <div className="text-sm text-slate-600">
               Belum punya akun?{' '}
