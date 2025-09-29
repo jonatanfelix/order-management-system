@@ -45,14 +45,19 @@ export default function GuestGanttPage() {
     },
   ])
 
-  // Generate 12 months timeline
+  // Generate 12 months timeline with holiday info
   const months = Array.from({ length: 12 }, (_, i) => {
     const date = new Date()
     date.setMonth(date.getMonth() + i)
+    const isSunday = date.getDay() === 0 // Sunday = 0
+    const isHoliday = isSunday // You can extend this for national holidays
+    
     return {
       month: i + 1,
       label: date.toLocaleDateString('id-ID', { month: 'short' }),
-      fullDate: date
+      fullDate: date,
+      isHoliday,
+      isSunday
     }
   })
 
@@ -273,8 +278,14 @@ export default function GuestGanttPage() {
               <div className="bg-yellow-200 border-2 border-black p-2 text-xs font-bold">TARGET REALISASI KERJA</div>
               <div className="col-span-12 grid grid-cols-12 gap-1">
                 {months.map((month) => (
-                  <div key={month.month} className="bg-yellow-200 border-2 border-black p-2 text-xs font-bold text-center">
+                  <div 
+                    key={month.month} 
+                    className={`border-2 border-black p-2 text-xs font-bold text-center ${
+                      month.isHoliday ? 'bg-red-200 text-red-800' : 'bg-yellow-200'
+                    }`}
+                  >
                     {month.label}
+                    {month.isSunday && <div className="text-xs">📅</div>}
                   </div>
                 ))}
               </div>
@@ -300,13 +311,29 @@ export default function GuestGanttPage() {
                 <div className="col-span-12 grid grid-cols-12 gap-1">
                   {months.map((month) => {
                     const isActive = step.months.includes(month.month)
+                    let cellClass = 'border-2 border-black h-8 relative '
+                    
+                    if (month.isHoliday) {
+                      // Holiday month - show pattern or different styling
+                      cellClass += isActive 
+                        ? `${getStepColor(step.name)} opacity-60 after:content-[''] after:absolute after:inset-0 after:bg-red-500 after:opacity-20`
+                        : 'bg-red-50'
+                    } else {
+                      cellClass += isActive ? getStepColor(step.name) : 'bg-white'
+                    }
+                    
                     return (
                       <div 
                         key={`${step.id}-${month.month}`} 
-                        className={`border-2 border-black h-8 ${
-                          isActive ? getStepColor(step.name) : 'bg-white'
-                        }`}
-                      />
+                        className={cellClass}
+                        title={month.isHoliday ? 'Hari libur - tidak kerja' : ''}
+                      >
+                        {month.isHoliday && isActive && (
+                          <div className="absolute inset-0 flex items-center justify-center text-xs text-red-600">
+                            ❌
+                          </div>
+                        )}
+                      </div>
                     )
                   })}
                 </div>
@@ -343,7 +370,7 @@ export default function GuestGanttPage() {
             {/* Legend */}
             <div className="mt-8 p-4 bg-slate-100 rounded-lg">
               <h4 className="font-semibold mb-3">🎨 Keterangan Warna:</h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs mb-4">
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 bg-red-500 border"></div>
                   <span>Persiapan Bahan</span>
@@ -361,8 +388,22 @@ export default function GuestGanttPage() {
                   <span>Finishing</span>
                 </div>
               </div>
-              <p className="text-xs text-slate-600 mt-2">
-                💡 Tip: Warna otomatis berdasarkan nama pekerjaan. Klik bulan untuk mengatur timeline.
+              
+              <h4 className="font-semibold mb-2">📅 Hari Libur:</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-red-200 border border-red-400"></div>
+                  <span>Minggu / Tanggal Merah (Tidak Kerja)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-red-50 border"></div>
+                  <span>Libur - Proses Terhenti</span>
+                </div>
+              </div>
+              
+              <p className="text-xs text-slate-600 mt-3">
+                💡 Tip: Warna otomatis berdasarkan nama pekerjaan. Hari Minggu ditandai merah dan proses tidak berjalan. 
+                Klik bulan untuk mengatur timeline.
               </p>
             </div>
 
