@@ -1,40 +1,29 @@
-import { redirect } from 'next/navigation'
+import { notFound } from 'next/navigation'
+import { GoogleCalendarTimeline } from '@/components/google-calendar-timeline'
 import { createClient } from '@/utils/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
-import { ArrowLeftIcon, PrinterIcon } from '@heroicons/react/24/outline'
-import { GoogleCalendarTimeline } from '@/components/google-calendar-timeline'
+import { Button } from '@/components/ui/button'
+import { ArrowLeft } from 'lucide-react'
 import { TaskStep } from '@/types/task'
 
-export default async function OrderGanttPage({ 
-  params 
-}: { 
-  params: { id: string } 
-}) {
+export default async function GuestGanttPage({ params }: { params: { id: string } }) {
   const { id } = params
   const supabase = await createClient()
-
-  const { data: { user }, error } = await supabase.auth.getUser()
-  
-  if (error || !user) {
-    redirect('/login')
-  }
 
   // Get order with tasks
   const { data: order } = await supabase
     .from('orders')
     .select(`
       *,
-      categories(name, description),
-      templates(name, code)
+      categories(name, description)
     `)
     .eq('id', id)
     .single()
 
   if (!order) {
-    redirect('/orders')
+    notFound()
   }
 
   // Get order tasks for timeline
@@ -60,7 +49,6 @@ export default async function OrderGanttPage({
     notes: task.notes
   }))
 
-
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
@@ -69,8 +57,8 @@ export default async function OrderGanttPage({
           <div className="flex items-center justify-between py-4">
             <div className="flex items-center">
               <Button variant="ghost" size="sm" asChild className="mr-4">
-                <Link href={`/orders/${id}`}>
-                  <ArrowLeftIcon className="h-4 w-4" />
+                <Link href={`/guest/orders/${id}`}>
+                  <ArrowLeft className="h-4 w-4" />
                 </Link>
               </Button>
               <div>
@@ -78,14 +66,10 @@ export default async function OrderGanttPage({
                   📊 {order.title}
                 </h1>
                 <p className="text-sm text-slate-600">
-                  Gantt Chart - Timeline Pengerjaan
+                  Timeline Pengerjaan
                 </p>
               </div>
             </div>
-            <Button size="sm">
-              <PrinterIcon className="h-4 w-4 mr-2" />
-              Print
-            </Button>
           </div>
         </div>
       </div>
@@ -99,10 +83,10 @@ export default async function OrderGanttPage({
                 📊 {order.title} - Timeline
               </CardTitle>
               <p className="text-sm text-slate-600">
-                {order.categories?.name} • {order.templates?.name || 'Custom Order'}
+                {order.categories?.name || 'No Category'}
               </p>
               <div className="flex items-center justify-center gap-2">
-                <Badge variant={order.status === 'APPROVED' ? 'default' : order.status === 'IN_PROGRESS' ? 'secondary' : 'outline'}>
+                <Badge variant="outline">
                   {order.status}
                 </Badge>
                 {order.customer_name && (
@@ -122,10 +106,10 @@ export default async function OrderGanttPage({
                     Belum Ada Tasks
                   </h3>
                   <p className="text-sm text-slate-600 mb-4">
-                    Order ini belum memiliki task timeline. Silakan tambahkan tasks dari halaman order.
+                    Order ini belum memiliki task timeline.
                   </p>
                   <Button asChild variant="outline">
-                    <Link href={`/orders/${id}`}>
+                    <Link href={`/guest/orders/${id}`}>
                       ← Kembali ke Order
                     </Link>
                   </Button>

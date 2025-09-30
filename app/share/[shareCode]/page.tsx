@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation'
+import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -36,7 +36,8 @@ export default async function PublicSharePage({ params }: PublicSharePageProps) 
     .single()
 
   if (shareError || !shareData || !shareData.orders) {
-    notFound()
+    // Redirect ke guest dashboard jika share code tidak valid
+    redirect('/guest/dashboard?error=share_not_found')
   }
 
   const order = shareData.orders as any

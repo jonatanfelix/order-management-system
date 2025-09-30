@@ -23,56 +23,93 @@ export function CategoryManager({ selectedCategory, onSelectCategory }: Category
   const [loading, setLoading] = useState(true)
   const [newCategoryName, setNewCategoryName] = useState('')
   const [isAdding, setIsAdding] = useState(false)
+  const [addingLoading, setAddingLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchCategories()
   }, [])
 
   const fetchCategories = async () => {
-    const supabase = createClient()
-    const { data, error } = await supabase
-      .from('categories')
-      .select('id, name')
-      .order('name')
+    try {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('categories')
+        .select('id, name')
+        .order('name')
 
-    if (!error && data) {
-      setCategories(data)
+      if (error) throw error
+      
+      if (data) {
+        setCategories(data)
+      }
+      setError(null)
+    } catch (err) {
+      console.error('Error fetching categories:', err)
+      setError('Gagal memuat kategori')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   const addCategory = async () => {
-    if (!newCategoryName.trim()) return
+    if (!newCategoryName.trim()) {
+      setError('Nama kategori tidak boleh kosong')
+      return
+    }
 
-    const supabase = createClient()
-    const { data, error } = await supabase
-      .from('categories')
-      .insert({ name: newCategoryName.trim() })
-      .select()
-      .single()
+    setAddingLoading(true)
+    setError(null)
+    
+    try {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('categories')
+        .insert({ name: newCategoryName.trim() })
+        .select()
+        .single()
 
-    if (!error && data) {
-      setCategories([...categories, data])
-      setNewCategoryName('')
-      setIsAdding(false)
-      onSelectCategory(data.name)
+      if (error) throw error
+      
+      if (data) {
+        setCategories([...categories, data])
+        setNewCategoryName('')
+        setIsAdding(false)
+        onSelectCategory(data.name)
+      }
+    } catch (err: any) {
+      console.error('Error adding category:', err)
+      setError(err.message === 'duplicate key value violates unique constraint "categories_name_key"' 
+        ? 'Kategori dengan nama ini sudah ada' 
+        : 'Gagal menambahkan kategori')
+    } finally {
+      setAddingLoading(false)
     }
   }
 
   const deleteCategory = async (id: string) => {
     if (!confirm('Hapus kategori ini?')) return
 
-    const supabase = createClient()
-    const { error } = await supabase
-      .from('categories')
-      .delete()
-      .eq('id', id)
+    setError(null)
+    
+    try {
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('categories')
+        .delete()
+        .eq('id', id)
 
-    if (!error) {
+      if (error) throw error
+      
       setCategories(categories.filter(c => c.id !== id))
       if (selectedCategory === categories.find(c => c.id === id)?.name) {
         onSelectCategory('')
       }
+    } catch (err: any) {
+      console.error('Error deleting category:', err)
+      setError(err.message.includes('foreign key') 
+        ? 'Tidak bisa menghapus kategori yang masih digunakan oleh order' 
+        : 'Gagal menghapus kategori')
     }
   }
 
@@ -82,6 +119,16 @@ export function CategoryManager({ selectedCategory, onSelectCategory }: Category
         <Package className="h-4 w-4" />
         Kategori
       </Label>
+      
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-md text-sm flex items-center justify-between">
+          <span>{error}</span>
+          <button onClick={() => setError(null)} className="text-red-500 hover:text-red-700">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
       
       {/* Category Pills */}
       <div className="flex flex-wrap gap-2">
@@ -122,8 +169,13 @@ export function CategoryManager({ selectedCategory, onSelectCategory }: Category
                   onKeyPress={(e) => e.key === 'Enter' && addCategory()}
                   autoFocus
                 />
-                <Button size="sm" onClick={addCategory} className="h-8">
-                  <Plus className="h-3 w-3" />
+                <Button 
+                  size="sm" 
+                  onClick={addCategory} 
+                  className="h-8"
+                  disabled={addingLoading}
+                >
+                  {addingLoading ? '...' : <Plus className="h-3 w-3" />}
                 </Button>
                 <Button 
                   size="sm" 

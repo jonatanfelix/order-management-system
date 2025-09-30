@@ -49,7 +49,8 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
     .single()
 
   if (orderError || !order) {
-    notFound()
+    // Alihkan ke daftar orders agar tidak 404 saat RLS/akses membatasi
+    redirect('/orders?error=not_found')
   }
 
   // Get order tasks if this is a task-based order

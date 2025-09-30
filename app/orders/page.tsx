@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import Link from 'next/link'
 import { PlusIcon, EyeIcon, CalendarIcon } from '@heroicons/react/24/outline'
 import { Suspense } from 'react'
+import { getStatusLabel, getStatusColor } from '@/lib/constants/status'
 
 interface OrdersPageProps {
   searchParams: {
@@ -67,21 +68,8 @@ async function OrdersList({ searchParams }: OrdersPageProps) {
   }
 
   // Apply status filter
-  if (searchParams.filter) {
-    switch (searchParams.filter) {
-      case 'pending':
-        ordersQuery = ordersQuery.eq('status', 'PENDING')
-        break
-      case 'in-progress':
-        ordersQuery = ordersQuery.eq('status', 'IN_PROGRESS')
-        break
-      case 'approved':
-        ordersQuery = ordersQuery.eq('status', 'APPROVED')
-        break
-      case 'completed':
-        ordersQuery = ordersQuery.eq('status', 'COMPLETED')
-        break
-    }
+  if (searchParams.filter && searchParams.filter !== 'all') {
+    ordersQuery = ordersQuery.eq('status', searchParams.filter.toUpperCase())
   }
 
   // Apply search filter
@@ -91,35 +79,6 @@ async function OrdersList({ searchParams }: OrdersPageProps) {
 
   const { data: orders = [] } = await ordersQuery.order('created_at', { ascending: false })
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'COMPLETED':
-        return 'default'
-      case 'APPROVED':
-        return 'secondary'
-      case 'IN_PROGRESS':
-        return 'outline'
-      case 'PENDING':
-        return 'destructive'
-      default:
-        return 'outline'
-    }
-  }
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'PENDING':
-        return 'Menunggu Persetujuan'
-      case 'APPROVED':
-        return 'Disetujui'
-      case 'IN_PROGRESS':
-        return 'Dalam Proses'
-      case 'COMPLETED':
-        return 'Selesai'
-      default:
-        return status
-    }
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -173,10 +132,12 @@ async function OrdersList({ searchParams }: OrdersPageProps) {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Semua Status</SelectItem>
-                    <SelectItem value="pending">Menunggu Persetujuan</SelectItem>
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="pending_approval">Menunggu Persetujuan</SelectItem>
                     <SelectItem value="approved">Disetujui</SelectItem>
-                    <SelectItem value="in-progress">Dalam Proses</SelectItem>
+                    <SelectItem value="in_progress">Dalam Proses</SelectItem>
                     <SelectItem value="completed">Selesai</SelectItem>
+                    <SelectItem value="rejected">Ditolak</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -203,8 +164,8 @@ async function OrdersList({ searchParams }: OrdersPageProps) {
                         }
                       </CardDescription>
                     </div>
-                    <Badge variant={getStatusColor(order.status)}>
-                      {getStatusText(order.status)}
+                    <Badge variant={getStatusColor(order.status) as any}>
+                      {getStatusLabel(order.status)}
                     </Badge>
                   </div>
                 </CardHeader>
