@@ -11,9 +11,9 @@ import { TaskStep } from '@/types/task'
 export default async function OrderGanttPage({ 
   params 
 }: { 
-  params: { id: string } 
+  params: Promise<{ id: string }>
 }) {
-  const { id } = params
+  const { id } = await params
   const supabase = await createClient()
 
   const { data: { user }, error } = await supabase.auth.getUser()

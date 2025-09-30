@@ -12,12 +12,13 @@ import { TaskStep } from '@/types/task'
 import { submitForApproval, approveRejectOrder } from '@/lib/actions/approval'
 
 interface OrderDetailPageProps {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 export default async function OrderDetailPage({ params }: OrderDetailPageProps) {
+  const { id } = await params
   const supabase = await createClient()
 
   const { data: { user }, error } = await supabase.auth.getUser()
@@ -45,7 +46,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
       categories (name, description),
       profiles!orders_created_by_fkey (name, email)
     `)
-    .eq('id', params.id)
+    .eq('id', id)
     .single()
 
   if (orderError || !order) {
@@ -57,7 +58,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
   const { data: tasks = [] } = await supabase
     .from('order_tasks')
     .select('*')
-    .eq('order_id', params.id)
+    .eq('order_id', id)
     .order('task_order')
 
   // Get order steps for traditional orders
@@ -66,7 +67,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
     const { data: stepsData = [] } = await supabase
       .from('order_steps')
       .select('*')
-      .eq('order_id', params.id)
+      .eq('order_id', id)
       .order('step_order')
     steps = stepsData || []
   }
@@ -78,14 +79,14 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
       *,
       profiles (full_name)
     `)
-    .eq('order_id', params.id)
+    .eq('order_id', id)
     .order('created_at', { ascending: false })
 
   // Get public share if exists
   const { data: publicShare } = await supabase
     .from('public_order_shares')
     .select('share_code')
-    .eq('order_id', params.id)
+    .eq('order_id', id)
     .single()
 
   // Calculate progress
@@ -184,7 +185,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
             <div className="flex items-center space-x-2">
               {/* Gantt Chart Button */}
               <Button variant="outline" size="sm" asChild>
-                <Link href={`/orders/${params.id}/gantt`}>
+                <Link href={`/orders/${id}/gantt`}>
                   📊 Timeline
                 </Link>
               </Button>

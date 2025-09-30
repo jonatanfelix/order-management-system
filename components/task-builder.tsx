@@ -15,6 +15,7 @@ import { Plus, Trash2, Calendar, Target, User, Clock, Edit2, Save, X, AlertCircl
 import { TaskStep, OrderTask } from '@/types/task'
 import { GoogleCalendarTimeline } from './google-calendar-timeline'
 import { CategoryManager } from './category-manager'
+import { PicSelector } from './pic-selector'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 
 // Helper to skip weekends
@@ -414,16 +415,10 @@ export default function TaskBuilderV2() {
                 className="mt-1"
               />
             </div>
-            <div>
-              <Label htmlFor="taskPic">PIC/Penanggung Jawab</Label>
-              <Input
-                id="taskPic"
-                value={newTask.pic}
-                onChange={(e) => setNewTask(prev => ({ ...prev, pic: e.target.value }))}
-                placeholder="Nama PIC"
-                className="mt-1"
-              />
-            </div>
+            <PicSelector
+              value={newTask.pic}
+              onChange={(pic) => setNewTask(prev => ({ ...prev, pic }))}
+            />
             <div>
               <Label>Durasi (hari kerja) - Max 999 hari</Label>
               <Input
@@ -432,6 +427,7 @@ export default function TaskBuilderV2() {
                 onChange={(e) => handleDurationChange(parseInt(e.target.value) || 1)}
                 min="1"
                 max="999"
+                step="1"
                 disabled={newTask.isMilestone}
                 className="mt-1"
               />

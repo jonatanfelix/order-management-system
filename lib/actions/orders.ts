@@ -202,7 +202,7 @@ export async function createPublicShare(orderId: string): Promise<ApiResponse<st
   }
 }
 
-export async function deleteOrder(orderId: string): Promise<ApiResponse> {
+export async function deleteOrder(orderId: string): Promise<void> {
   const supabase = await createClient()
 
   try {
@@ -212,15 +212,17 @@ export async function deleteOrder(orderId: string): Promise<ApiResponse> {
       .eq('id', orderId)
 
     if (error) {
-      return { error: error.message }
+      throw new Error(error.message)
     }
 
+    revalidatePath('/dashboard')
     revalidatePath('/orders')
-    return { message: 'Order deleted successfully' }
-    
   } catch (error) {
-    return { error: error instanceof Error ? error.message : 'Failed to delete order' }
+    console.error('Error deleting order:', error)
+    throw error
   }
+  
+  redirect('/dashboard')
 }
 
 export async function updateOrderStep(stepId: string, qty: number): Promise<ApiResponse> {

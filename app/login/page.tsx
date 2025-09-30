@@ -4,8 +4,8 @@ import { Input } from '@/components/ui/input'
 import { signIn } from '@/lib/actions/auth'
 import Link from 'next/link'
 
-export default function LoginPage({ searchParams }: { searchParams: { error?: string } }) {
-  const errorMessage = searchParams.error
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+  const { error: errorMessage } = await searchParams
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
       <Card className="w-full max-w-md shadow-2xl border-2 border-slate-200">

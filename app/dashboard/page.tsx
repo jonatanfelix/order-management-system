@@ -3,7 +3,8 @@ import { createClient } from '@/utils/supabase/server'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
-import { PlusIcon, EyeIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
+import { deleteOrder } from '@/lib/actions/orders'
 
 export default async function Dashboard() {
   const supabase = await createClient()
@@ -170,16 +171,31 @@ export default async function Dashboard() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex gap-2">
-                          <Button size="sm" variant="ghost" asChild>
-                            <Link href={`/orders/${order.id}`}>
-                              <EyeIcon className="h-4 w-4" />
-                            </Link>
-                          </Button>
+                          {/* Timeline Button */}
                           <Button size="sm" variant="outline" asChild>
                             <Link href={`/orders/${order.id}/gantt`}>
                               📊
                             </Link>
                           </Button>
+                          
+                          {/* Edit Button - Only ADMIN and INPUTER can edit before approval */}
+                          {profile && (profile.role === 'ADMIN' || profile.role === 'INPUTER') && 
+                           order.status !== 'APPROVED' && (
+                            <Button size="sm" variant="ghost" asChild>
+                              <Link href={`/orders/${order.id}/edit`}>
+                                <PencilIcon className="h-4 w-4" />
+                              </Link>
+                            </Button>
+                          )}
+                          
+                          {/* Delete Button - ADMIN, INPUTER, APPROVER can delete */}
+                          {profile && (profile.role === 'ADMIN' || profile.role === 'INPUTER' || profile.role === 'APPROVER') && (
+                            <form action={deleteOrder.bind(null, order.id)}>
+                              <Button size="sm" variant="ghost" type="submit" className="text-red-600 hover:text-red-700">
+                                <TrashIcon className="h-4 w-4" />
+                              </Button>
+                            </form>
+                          )}
                         </div>
                       </td>
                     </tr>
