@@ -10,29 +10,38 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 export default async function GuestDashboard() {
-  const supabase = await createClient()
-  
-  // Fetch all orders (guest can see all for demo/public dashboard)
-  // Note: This requires RLS policies to allow public read access
-  const { data: orders, error } = await supabase
-    .from('orders')
-    .select(`
-      id, title, customer_name, value_idr, status, 
-      created_at, is_task_based, total_duration_days,
-      estimated_start_date, estimated_end_date,
-      categories(name),
-      order_tasks(
-        id, name, pic, duration_days, progress, is_milestone
-      )
-    `)
-    .order('created_at', { ascending: false })
-    .limit(100)
+  let ordersList: any[] = []
+  let fetchError: string | null = null
 
-  if (error) {
-    console.error('Error fetching orders for guest dashboard:', error)
+  try {
+    const supabase = await createClient()
+    
+    // Fetch all orders (guest can see all for demo/public dashboard)
+    // Note: This requires RLS policies to allow public read access
+    const { data: orders, error } = await supabase
+      .from('orders')
+      .select(`
+        id, title, customer_name, value_idr, status, 
+        created_at, is_task_based, total_duration_days,
+        estimated_start_date, estimated_end_date,
+        categories(name),
+        order_tasks(
+          id, name, pic, duration_days, progress, is_milestone
+        )
+      `)
+      .order('created_at', { ascending: false })
+      .limit(100)
+
+    if (error) {
+      console.error('Error fetching orders for guest dashboard:', error)
+      fetchError = error.message || 'Failed to fetch orders'
+    } else {
+      ordersList = orders || []
+    }
+  } catch (err) {
+    console.error('Unexpected error in guest dashboard:', err)
+    fetchError = 'Unexpected error occurred'
   }
-
-  const ordersList = orders || []
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('id-ID', { 
@@ -73,6 +82,17 @@ export default async function GuestDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Error Message */}
+      {fetchError && (
+        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
+            <p className="font-semibold">⚠️ Error Loading Data</p>
+            <p className="text-sm mt-1">{fetchError}</p>
+            <p className="text-xs mt-2">Make sure Supabase RLS policies are configured for guest access.</p>
+          </div>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">

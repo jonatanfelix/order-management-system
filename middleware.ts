@@ -54,6 +54,11 @@ export async function middleware(request: NextRequest) {
     return response
   }
 
+  // Guest routes (anonymous access) - Allow non-authenticated access
+  if (pathname.startsWith('/guest')) {
+    return response
+  }
+
   // If not authenticated and trying to access protected route
   if (!user && !publicRoutes.includes(pathname)) {
     return NextResponse.redirect(new URL('/login', request.url))
