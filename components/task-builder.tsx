@@ -70,6 +70,7 @@ export default function TaskBuilderV2() {
     pic: '',
     quantity: 1,
     unit: 'pcs',
+    target: '',
     progress: 0,
     dependsOn: [],
     isMilestone: false,
@@ -137,6 +138,7 @@ export default function TaskBuilderV2() {
       pic: newTask.pic || '',
       quantity: newTask.quantity || 1,
       unit: newTask.unit || 'pcs',
+      target: newTask.target || '',
       progress: newTask.progress || 0,
       dependsOn: newTask.dependsOn || [],
       isMilestone: newTask.isMilestone || false,
@@ -157,6 +159,7 @@ export default function TaskBuilderV2() {
       pic: '',
       quantity: 1,
       unit: 'pcs',
+      target: '',
       progress: 0,
       dependsOn: [],
       isMilestone: false,
@@ -262,6 +265,7 @@ export default function TaskBuilderV2() {
           pic: task.pic,
           quantity: task.quantity,
           unit: task.unit,
+          target: task.target || '',
           startDate: task.startDate.toISOString(),
           endDate: task.endDate.toISOString(),
           duration: task.duration,
@@ -454,15 +458,26 @@ export default function TaskBuilderV2() {
               />
             </div>
             <div className="col-span-2">
-              <Label>Progress (%): {newTask.progress}%</Label>
-              <Slider
-                value={[newTask.progress || 0]}
-                onValueChange={([value]) => setNewTask(prev => ({ ...prev, progress: value }))}
-                max={100}
-                step={5}
-                className="mt-3"
+              <Label>🎯 Target Realisasi Kerja</Label>
+              <Input
+                value={newTask.target}
+                onChange={(e) => setNewTask(prev => ({ ...prev, target: e.target.value }))}
+                placeholder="Contoh: 20 rim, 1 kali 200 rim, sesuai plate selesai"
+                className="mt-1"
               />
+              <p className="text-xs text-slate-500 mt-1">Target output atau hasil yang diharapkan</p>
             </div>
+          </div>
+          
+          <div>
+            <Label>Progress (%): {newTask.progress}%</Label>
+            <Slider
+              value={[newTask.progress || 0]}
+              onValueChange={([value]) => setNewTask(prev => ({ ...prev, progress: value }))}
+              max={100}
+              step={5}
+              className="mt-3"
+            />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

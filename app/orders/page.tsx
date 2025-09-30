@@ -53,14 +53,17 @@ async function OrdersList({ searchParams }: OrdersPageProps) {
       description,
       status,
       eta,
+      estimated_end_date,
+      is_task_based,
       created_at,
       categories (name),
-      profiles!orders_input_staff_id_fkey (full_name)
+      profiles!orders_created_by_fkey (full_name, name)
     `)
 
   // Apply role-based filtering
+  // For task-based orders, use created_by; for traditional orders, use input_staff_id
   if (profile.role === 'INPUT_STAFF') {
-    ordersQuery = ordersQuery.eq('input_staff_id', user.id)
+    ordersQuery = ordersQuery.or(`input_staff_id.eq.${user.id},created_by.eq.${user.id}`)
   }
 
   // Apply status filter
@@ -214,8 +217,8 @@ async function OrdersList({ searchParams }: OrdersPageProps) {
                       </Badge>
                     </div>
                     <div className="flex items-center justify-between text-sm text-gray-600">
-                      <span>Input Staff:</span>
-                      <span>{order.profiles?.full_name || 'N/A'}</span>
+                      <span>{order.is_task_based ? 'Dibuat oleh:' : 'Input Staff:'}</span>
+                      <span>{order.profiles?.full_name || order.profiles?.name || 'N/A'}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm text-gray-600">
                       <span>Dibuat:</span>
@@ -224,13 +227,20 @@ async function OrdersList({ searchParams }: OrdersPageProps) {
                         {new Date(order.created_at).toLocaleDateString('id-ID')}
                       </div>
                     </div>
-                    {order.eta && (
+                    {(order.eta || order.estimated_end_date) && (
                       <div className="flex items-center justify-between text-sm text-gray-600">
-                        <span>ETA:</span>
+                        <span>Target Selesai:</span>
                         <div className="flex items-center">
                           <CalendarIcon className="mr-1 h-4 w-4" />
-                          {new Date(order.eta).toLocaleDateString('id-ID')}
+                          {new Date(order.estimated_end_date || order.eta).toLocaleDateString('id-ID')}
                         </div>
+                      </div>
+                    )}
+                    {order.is_task_based && (
+                      <div className="mt-2">
+                        <Badge variant="secondary" className="text-xs">
+                          📅 Task-Based Order
+                        </Badge>
                       </div>
                     )}
                   </div>
