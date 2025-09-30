@@ -8,15 +8,18 @@ export default async function GuestDashboard() {
   const supabase = await createClient()
 
   // Get all orders (public view - no authentication required)
-  const { data: orders } = await supabase
+  const { data: orders, error } = await supabase
     .from('orders')
     .select(`
       id, title, client_name, value_idr, status, 
-      created_at, eta_at,
-      categories(name),
-      templates(name, code)
+      created_at,
+      categories(name)
     `)
     .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('Error fetching orders:', error)
+  }
 
   const ordersList = orders || []
 
@@ -140,7 +143,7 @@ export default async function GuestDashboard() {
                             {order.title || `Order #${order.id.slice(0, 8)}`}
                           </div>
                           <div className="text-xs text-slate-500">
-                            {order.templates?.code || 'No Template'}
+                            ID: {order.id.slice(0, 8)}
                           </div>
                         </div>
                       </td>

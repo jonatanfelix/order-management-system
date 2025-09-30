@@ -332,14 +332,14 @@ export default function TaskBuilder() {
             <div>
               <Label>Ketergantungan (Tunggu selesai)</Label>
               <Select 
-                value={newTask.dependsOn?.join(',')} 
-                onValueChange={(value) => setNewTask(prev => ({ ...prev, dependsOn: value ? value.split(',') : [] }))}
+                value={newTask.dependsOn?.length ? newTask.dependsOn[0] : 'none'} 
+                onValueChange={(value) => setNewTask(prev => ({ ...prev, dependsOn: value === 'none' ? [] : [value] }))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Pilih task yang harus selesai dulu" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Tidak ada</SelectItem>
+                  <SelectItem value="none">Tidak ada</SelectItem>
                   {orderData.tasks.map(task => (
                     <SelectItem key={task.id} value={task.id}>
                       {task.name}
