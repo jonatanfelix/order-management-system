@@ -11,12 +11,11 @@ import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Trash2, Calendar, Target, User, Clock } from 'lucide-react'
+import { Plus, Trash2, Calendar, Target, User, Clock, Edit2, Save, X, AlertCircle } from 'lucide-react'
 import { TaskStep, OrderTask } from '@/types/task'
-import { TaskGanttPreview } from './task-gantt-preview'
+import { GoogleCalendarTimeline } from './google-calendar-timeline'
 import { CategoryManager } from './category-manager'
-import { CalendarDatePicker } from './calendar-date-picker'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 
 // Helper to skip weekends
 const addWorkingDays = (date: Date, days: number): Date => {
@@ -36,7 +35,6 @@ const addWorkingDays = (date: Date, days: number): Date => {
 
 const calculateDuration = (start: Date, end: Date): number => {
   const diffTime = end.getTime() - start.getTime()
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
   
   // Count working days (exclude Sundays)
   let workingDays = 0
@@ -52,7 +50,7 @@ const calculateDuration = (start: Date, end: Date): number => {
   return workingDays
 }
 
-export default function TaskBuilder() {
+export default function TaskBuilderV2() {
   const router = useRouter()
   const [orderData, setOrderData] = useState<OrderTask>({
     title: '',
@@ -78,9 +76,10 @@ export default function TaskBuilder() {
     notes: ''
   })
 
-  const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
+  const [editingTask, setEditingTask] = useState<string | null>(null)
+  const [editTaskData, setEditTaskData] = useState<Partial<TaskStep> | null>(null)
   const [isSaving, setIsSaving] = useState(false)
-  const [showStartDatePicker, setShowStartDatePicker] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   // Update duration when dates change
   useEffect(() => {
@@ -115,7 +114,10 @@ export default function TaskBuilder() {
   }
 
   const addTask = () => {
-    if (!newTask.name?.trim()) return
+    if (!newTask.name?.trim()) {
+      alert('Nama task harus diisi!')
+      return
+    }
 
     const taskId = Date.now().toString()
     const startDate = newTask.dependsOn?.length 
@@ -162,7 +164,64 @@ export default function TaskBuilder() {
     })
   }
 
+  const startEditTask = (task: TaskStep) => {
+    setEditingTask(task.id)
+    setEditTaskData({
+      name: task.name,
+      pic: task.pic,
+      quantity: task.quantity,
+      unit: task.unit,
+      duration: task.duration,
+      progress: task.progress,
+      isMilestone: task.isMilestone,
+      notes: task.notes,
+      startDate: task.startDate,
+      endDate: task.endDate,
+      dependsOn: task.dependsOn
+    })
+  }
+
+  const saveEditTask = () => {
+    if (!editingTask || !editTaskData) return
+
+    setOrderData(prev => ({
+      ...prev,
+      tasks: prev.tasks.map(task => {
+        if (task.id === editingTask) {
+          const startDate = editTaskData.startDate || task.startDate
+          const endDate = editTaskData.isMilestone 
+            ? startDate 
+            : addWorkingDays(startDate, editTaskData.duration || 1)
+
+          return {
+            ...task,
+            name: editTaskData.name || task.name,
+            pic: editTaskData.pic || '',
+            quantity: editTaskData.quantity || task.quantity,
+            unit: editTaskData.unit || task.unit,
+            duration: editTaskData.isMilestone ? 0 : (editTaskData.duration || task.duration),
+            progress: editTaskData.progress ?? task.progress,
+            isMilestone: editTaskData.isMilestone ?? task.isMilestone,
+            notes: editTaskData.notes,
+            startDate,
+            endDate
+          }
+        }
+        return task
+      })
+    }))
+
+    cancelEditTask()
+  }
+
+  const cancelEditTask = () => {
+    setEditingTask(null)
+    setEditTaskData(null)
+  }
+
   const removeTask = (taskId: string) => {
+    if (!confirm('Hapus task ini?')) return
+    
     setOrderData(prev => ({
       ...prev,
       tasks: prev.tasks.filter(t => t.id !== taskId)
@@ -170,40 +229,78 @@ export default function TaskBuilder() {
   }
 
   const saveOrder = async () => {
-    if (!orderData.title.trim() || orderData.tasks.length === 0) {
-      alert('Judul pesanan dan minimal 1 task harus diisi')
+    console.log('🚀 saveOrder called')
+    console.log('Order Data:', orderData)
+
+    setSaveError(null)
+
+    // Validation
+    if (!orderData.title.trim()) {
+      setSaveError('Judul pesanan harus diisi!')
+      alert('❌ Judul pesanan harus diisi!')
+      return
+    }
+
+    if (orderData.tasks.length === 0) {
+      setSaveError('Minimal 1 task harus ditambahkan!')
+      alert('❌ Minimal 1 task harus ditambahkan!')
       return
     }
 
     setIsSaving(true)
 
     try {
+      console.log('📤 Sending request to API...')
+      
+      const payload = {
+        title: orderData.title,
+        client: orderData.client || '',
+        category: orderData.category || '',
+        priority: orderData.priority,
+        tasks: orderData.tasks.map(task => ({
+          name: task.name,
+          pic: task.pic,
+          quantity: task.quantity,
+          unit: task.unit,
+          startDate: task.startDate.toISOString(),
+          endDate: task.endDate.toISOString(),
+          duration: task.duration,
+          progress: task.progress,
+          isMilestone: task.isMilestone,
+          dependsOn: task.dependsOn,
+          notes: task.notes || ''
+        }))
+      }
+
+      console.log('📦 Payload:', JSON.stringify(payload, null, 2))
+
       const response = await fetch('/api/orders/task-based', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          title: orderData.title,
-          client: orderData.client,
-          category: orderData.category,
-          priority: orderData.priority,
-          tasks: orderData.tasks
-        })
+        body: JSON.stringify(payload)
       })
 
+      console.log('📥 Response status:', response.status)
+
       const result = await response.json()
+      console.log('📥 Response body:', result)
 
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to save order')
+        throw new Error(result.error || `HTTP ${response.status}: Failed to save order`)
       }
 
-      alert('✅ Pesanan berhasil disimpan!')
+      console.log('✅ Order saved successfully!')
+      alert(`✅ Pesanan "${orderData.title}" berhasil disimpan!\n\nOrder ID: ${result.orderId}`)
+      
       // Redirect to orders list
       router.push('/orders')
     } catch (error) {
-      console.error('Error saving order:', error)
-      alert(`❌ Gagal menyimpan pesanan: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      console.error('❌ Error saving order:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      setSaveError(errorMessage)
+      alert(`❌ Gagal menyimpan pesanan!\n\nError: ${errorMessage}\n\nSilakan cek console untuk detail.`)
     } finally {
       setIsSaving(false)
     }
@@ -230,6 +327,14 @@ export default function TaskBuilder() {
           </div>
         </div>
 
+        {/* Error Alert */}
+        {saveError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{saveError}</AlertDescription>
+          </Alert>
+        )}
+
       {/* Header Card */}
       <Card className="bg-white shadow-lg border-2 border-slate-200">
         <CardHeader>
@@ -238,7 +343,7 @@ export default function TaskBuilder() {
             Buat Pesanan - Task Builder
           </CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="title">Judul Pesanan *</Label>
             <Input
@@ -246,6 +351,7 @@ export default function TaskBuilder() {
               value={orderData.title}
               onChange={(e) => setOrderData(prev => ({ ...prev, title: e.target.value }))}
               placeholder="Nama proyek/pesanan"
+              className="mt-1"
             />
           </div>
           <div>
@@ -255,18 +361,22 @@ export default function TaskBuilder() {
               value={orderData.client}
               onChange={(e) => setOrderData(prev => ({ ...prev, client: e.target.value }))}
               placeholder="Nama client"
+              className="mt-1"
             />
           </div>
-          <div>
+          <div className="md:col-span-2">
             <CategoryManager
               selectedCategory={orderData.category}
-              onSelectCategory={(category) => setOrderData(prev => ({ ...prev, category }))}
+              onSelectCategory={(category) => {
+                console.log('Category selected:', category)
+                setOrderData(prev => ({ ...prev, category }))
+              }}
             />
           </div>
           <div>
             <Label htmlFor="priority">Prioritas</Label>
             <Select value={orderData.priority} onValueChange={(value: 'low' | 'normal' | 'high') => setOrderData(prev => ({ ...prev, priority: value }))}>
-              <SelectTrigger>
+              <SelectTrigger className="mt-1">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -288,14 +398,15 @@ export default function TaskBuilder() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="md:col-span-2">
               <Label htmlFor="taskName">Aktivitas/Pekerjaan *</Label>
               <Input
                 id="taskName"
                 value={newTask.name}
                 onChange={(e) => setNewTask(prev => ({ ...prev, name: e.target.value }))}
                 placeholder="Nama aktivitas/langkah kerja"
+                className="mt-1"
               />
             </div>
             <div>
@@ -305,11 +416,24 @@ export default function TaskBuilder() {
                 value={newTask.pic}
                 onChange={(e) => setNewTask(prev => ({ ...prev, pic: e.target.value }))}
                 placeholder="Nama PIC"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label>Durasi (hari kerja) - Max 999 hari</Label>
+              <Input
+                type="number"
+                value={newTask.duration}
+                onChange={(e) => handleDurationChange(parseInt(e.target.value) || 1)}
+                min="1"
+                max="999"
+                disabled={newTask.isMilestone}
+                className="mt-1"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
               <Label>Kuantitas</Label>
               <Input
@@ -317,6 +441,7 @@ export default function TaskBuilder() {
                 value={newTask.quantity}
                 onChange={(e) => setNewTask(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
                 min="1"
+                className="mt-1"
               />
             </div>
             <div>
@@ -325,28 +450,18 @@ export default function TaskBuilder() {
                 value={newTask.unit}
                 onChange={(e) => setNewTask(prev => ({ ...prev, unit: e.target.value }))}
                 placeholder="pcs, lembar, dll"
+                className="mt-1"
               />
             </div>
-            <div>
-              <Label>Durasi (hari kerja)</Label>
-              <Input
-                type="number"
-                value={newTask.duration}
-                onChange={(e) => handleDurationChange(parseInt(e.target.value) || 1)}
-                min="1"
-                disabled={newTask.isMilestone}
-              />
-            </div>
-            <div>
-              <Label>Progress (%)</Label>
+            <div className="col-span-2">
+              <Label>Progress (%): {newTask.progress}%</Label>
               <Slider
                 value={[newTask.progress || 0]}
                 onValueChange={([value]) => setNewTask(prev => ({ ...prev, progress: value }))}
                 max={100}
                 step={5}
-                className="mt-2"
+                className="mt-3"
               />
-              <span className="text-sm text-gray-600">{newTask.progress}%</span>
             </div>
           </div>
 
@@ -357,7 +472,7 @@ export default function TaskBuilder() {
                 value={newTask.dependsOn?.length ? newTask.dependsOn[0] : 'none'} 
                 onValueChange={(value) => setNewTask(prev => ({ ...prev, dependsOn: value === 'none' ? [] : [value] }))}
               >
-                <SelectTrigger>
+                <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Pilih task yang harus selesai dulu" />
                 </SelectTrigger>
                 <SelectContent>
@@ -370,7 +485,7 @@ export default function TaskBuilder() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 mt-6">
               <Switch
                 checked={newTask.isMilestone}
                 onCheckedChange={(checked) => setNewTask(prev => ({ ...prev, isMilestone: checked }))}
@@ -386,12 +501,14 @@ export default function TaskBuilder() {
               onChange={(e) => setNewTask(prev => ({ ...prev, notes: e.target.value }))}
               placeholder="Catatan tambahan untuk task ini"
               rows={2}
+              className="mt-1"
             />
           </div>
 
           <Button 
             onClick={addTask} 
             className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-6 text-lg shadow-lg hover:shadow-xl transition-all"
+            type="button"
           >
             <Plus className="h-5 w-5 mr-2" />
             ➕ Tambah Task ke Daftar
@@ -399,49 +516,105 @@ export default function TaskBuilder() {
         </CardContent>
       </Card>
 
-      {/* Task List */}
+      {/* Task List with Edit */}
       {orderData.tasks.length > 0 && (
         <Card className="bg-white shadow-lg border-2 border-slate-200">
           <CardHeader>
             <CardTitle>Daftar Task ({orderData.tasks.length})</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {orderData.tasks.map((task, index) => (
-                <div key={task.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex-1 grid grid-cols-1 md:grid-cols-6 gap-2 text-sm">
-                    <div className="font-medium">
-                      {index + 1}. {task.name}
-                      {task.isMilestone && <Badge variant="outline" className="ml-2">Milestone</Badge>}
+                <div key={task.id} className="border rounded-lg p-4">
+                  {editingTask === task.id ? (
+                    /* Edit Mode */
+                    <div className="space-y-3">
+                      <Input
+                        value={editTaskData?.name}
+                        onChange={(e) => setEditTaskData(prev => prev ? { ...prev, name: e.target.value } : null)}
+                        placeholder="Nama task"
+                      />
+                      <div className="grid grid-cols-3 gap-2">
+                        <Input
+                          value={editTaskData?.pic}
+                          onChange={(e) => setEditTaskData(prev => prev ? { ...prev, pic: e.target.value } : null)}
+                          placeholder="PIC"
+                        />
+                        <Input
+                          type="number"
+                          value={editTaskData?.duration}
+                          onChange={(e) => setEditTaskData(prev => prev ? { ...prev, duration: parseInt(e.target.value) } : null)}
+                          placeholder="Durasi"
+                          min="1"
+                          max="999"
+                        />
+                        <Input
+                          type="number"
+                          value={editTaskData?.progress}
+                          onChange={(e) => setEditTaskData(prev => prev ? { ...prev, progress: parseInt(e.target.value) } : null)}
+                          placeholder="Progress %"
+                          min="0"
+                          max="100"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button onClick={saveEditTask} size="sm" className="gap-1">
+                          <Save className="h-3 w-3" />
+                          Simpan
+                        </Button>
+                        <Button onClick={cancelEditTask} variant="outline" size="sm" className="gap-1">
+                          <X className="h-3 w-3" />
+                          Batal
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1 text-gray-600">
-                      <User className="h-3 w-3" />
-                      {task.pic || 'TBD'}
+                  ) : (
+                    /* Display Mode */
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="font-semibold text-slate-700">{index + 1}.</span>
+                          <span className="font-bold text-slate-900">{task.name}</span>
+                          {task.isMilestone && <Badge variant="outline" className="text-yellow-600">🎯 Milestone</Badge>}
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm text-slate-600">
+                          <div className="flex items-center gap-1">
+                            <User className="h-3 w-3" />
+                            {task.pic || 'TBD'}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {task.duration} hari
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {task.startDate.toLocaleDateString('id-ID')}
+                          </div>
+                          <div>
+                            Progress: {task.progress}%
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 ml-4">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => startEditTask(task)}
+                          className="text-blue-600 hover:text-blue-800"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeTask(task.id)}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1 text-gray-600">
-                      <Target className="h-3 w-3" />
-                      {task.quantity} {task.unit}
-                    </div>
-                    <div className="flex items-center gap-1 text-gray-600">
-                      <Clock className="h-3 w-3" />
-                      {task.duration} hari
-                    </div>
-                    <div className="flex items-center gap-1 text-gray-600">
-                      <Calendar className="h-3 w-3" />
-                      {task.startDate.toLocaleDateString('id-ID')}
-                    </div>
-                    <div className="text-gray-600">
-                      Progress: {task.progress}%
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeTask(task.id)}
-                    className="text-red-600 hover:text-red-800"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  )}
                 </div>
               ))}
             </div>
@@ -449,24 +622,31 @@ export default function TaskBuilder() {
         </Card>
       )}
 
-      {/* Gantt Preview */}
+      {/* Google Calendar Preview */}
       {orderData.tasks.length > 0 && (
         <Card className="bg-white shadow-lg border-2 border-slate-200">
           <CardHeader>
-            <CardTitle>Preview Timeline</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              📅 Google Calendar Timeline Preview
+            </CardTitle>
+            <p className="text-sm text-slate-600 mt-1">
+              View: Bulan / Minggu / Agenda - Task bars otomatis span across dates
+            </p>
           </CardHeader>
           <CardContent>
-            <TaskGanttPreview tasks={orderData.tasks} />
+            <GoogleCalendarTimeline tasks={orderData.tasks} />
           </CardContent>
         </Card>
       )}
 
       {/* Save Button */}
-      <div className="flex justify-end gap-4">
+      <div className="flex justify-end gap-4 sticky bottom-4 bg-white p-4 rounded-lg shadow-xl border-2 border-slate-200">
         <Button 
           variant="outline"
           onClick={() => router.back()}
           className="px-8 py-6 text-lg"
+          disabled={isSaving}
         >
           Batal
         </Button>
