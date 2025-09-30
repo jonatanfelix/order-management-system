@@ -8,21 +8,18 @@ import { PlusIcon, EyeIcon } from '@heroicons/react/24/outline'
 export default async function Dashboard() {
   const supabase = await createClient()
 
-  const { data: { user }, error } = await supabase.auth.getUser()
+  // Try to get authenticated user (may be null for guest)
+  const { data: { user } } = await supabase.auth.getUser()
   
-  if (error || !user) {
-    redirect('/login')
-  }
-
-  // Get user profile
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single()
-
-  if (!profile) {
-    redirect('/login')
+  // Get user profile if authenticated
+  let profile: any = null
+  if (user) {
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single()
+    profile = profileData
   }
 
   // Get orders with more details
@@ -30,14 +27,15 @@ export default async function Dashboard() {
     .from('orders')
     .select(`
       id, title, client_name, value_idr, status, 
-      created_at, eta_at,
+      created_at, eta_at, is_task_based,
       categories(name),
-      templates(name, code)
+      templates(name, code),
+      order_tasks(id, progress)
     `)
     .order('created_at', { ascending: false })
 
-  // Input staff can only see their own orders
-  if (profile.role === 'INPUTER') {
+  // Input staff can only see their own orders (if authenticated)
+  if (user && profile && profile.role === 'INPUTER') {
     ordersQuery = ordersQuery.eq('created_by', user.id)
   }
 
@@ -73,12 +71,12 @@ export default async function Dashboard() {
                 📊 Dashboard - Order Management
               </h1>
               <p className="text-slate-600">
-                Halo {profile.name} ({profile.role})
+                {profile ? `Halo ${profile.name} (${profile.role})` : '🌐 Mode Guest - View Only'}
               </p>
             </div>
             <div className="flex items-center gap-3">
-              {/* Only ADMIN and INPUTER can create orders */}
-              {(profile.role === 'ADMIN' || profile.role === 'INPUTER') && (
+              {/* Only ADMIN and INPUTER can create orders (if authenticated) */}
+              {profile && (profile.role === 'ADMIN' || profile.role === 'INPUTER') && (
                 <Button asChild>
                   <Link href="/orders/new">
                     <PlusIcon className="h-4 w-4 mr-2" />
@@ -87,18 +85,20 @@ export default async function Dashboard() {
                 </Button>
               )}
               
-              {/* All authenticated users can access guest mode */}
-              <Button asChild variant="outline">
-                <Link href="/guest/dashboard">
-                  🌐 Guest Mode
-                </Link>
-              </Button>
-              
-              <form action="/auth/signout" method="post">
-                <Button variant="ghost" type="submit">
-                  Keluar
+              {/* Show logout if authenticated, login if guest */}
+              {profile ? (
+                <form action="/auth/signout" method="post">
+                  <Button variant="ghost" type="submit">
+                    Keluar
+                  </Button>
+                </form>
+              ) : (
+                <Button asChild variant="outline">
+                  <Link href="/login">
+                    Login
+                  </Link>
                 </Button>
-              </form>
+              )}
             </div>
           </div>
         </div>

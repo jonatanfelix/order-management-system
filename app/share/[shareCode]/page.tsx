@@ -36,8 +36,8 @@ export default async function PublicSharePage({ params }: PublicSharePageProps) 
     .single()
 
   if (shareError || !shareData || !shareData.orders) {
-    // Redirect ke guest dashboard jika share code tidak valid
-    redirect('/guest/dashboard?error=share_not_found')
+    // Redirect ke dashboard jika share code tidak valid
+    redirect('/dashboard?error=share_not_found')
   }
 
   const order = shareData.orders as any

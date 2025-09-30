@@ -47,7 +47,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Public routes that don't require authentication
-  const publicRoutes = ['/login', '/signup', '/']
+  const publicRoutes = ['/login', '/signup', '/', '/dashboard']
   
   // Public share routes (anonymous access)
   if (pathname.startsWith('/share/')) {
