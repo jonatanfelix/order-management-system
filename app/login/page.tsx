@@ -58,9 +58,9 @@ export default function LoginPage() {
               </div>
             </div>
             <Button asChild variant="outline" className="w-full mt-4 border-2 border-green-300 text-green-700 hover:bg-green-50">
-              <a href="/guest/dashboard">
+              <Link href="/guest/dashboard">
                 🌐 Mode Guest - Lihat Dashboard Tanpa Login
-              </a>
+              </Link>
             </Button>
           </div>
           

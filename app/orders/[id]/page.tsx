@@ -7,7 +7,7 @@ import { Separator } from '@/components/ui/separator'
 import { Progress } from '@/components/ui/progress'
 import Link from 'next/link'
 import { ArrowLeftIcon, CalendarIcon, ClockIcon, UserIcon, ShareIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline'
-import { TaskGanttPreview } from '@/components/task-gantt-preview'
+import { GoogleCalendarTimeline } from '@/components/google-calendar-timeline'
 import { TaskStep } from '@/types/task'
 import { submitForApproval, approveRejectOrder } from '@/lib/actions/approval'
 
@@ -306,9 +306,9 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                 <Progress value={progressPercentage} className="w-full" />
                 
                 {isTaskBased ? (
-                  // Task-based Gantt chart
+                  // Task-based Google Calendar Timeline
                   <div className="mt-6">
-                    <TaskGanttPreview 
+                    <GoogleCalendarTimeline 
                       tasks={tasksList.map((task: any) => ({
                         id: task.id,
                         name: task.name,
