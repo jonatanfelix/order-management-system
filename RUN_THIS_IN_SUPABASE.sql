@@ -70,8 +70,9 @@ CREATE INDEX IF NOT EXISTS idx_order_tasks_progress ON order_tasks(progress);
 CREATE INDEX IF NOT EXISTS idx_orders_task_based ON orders(is_task_based);
 CREATE INDEX IF NOT EXISTS idx_orders_estimated_dates ON orders(estimated_start_date, estimated_end_date);
 
--- 4. Create trigger for updated_at
-CREATE TRIGGER IF NOT EXISTS update_order_tasks_updated_at 
+-- 4. Create trigger for updated_at (drop first if exists)
+DROP TRIGGER IF EXISTS update_order_tasks_updated_at ON order_tasks;
+CREATE TRIGGER update_order_tasks_updated_at 
 BEFORE UPDATE ON order_tasks 
 FOR EACH ROW 
 EXECUTE FUNCTION update_updated_at_column();

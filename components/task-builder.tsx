@@ -14,6 +14,9 @@ import { Badge } from '@/components/ui/badge'
 import { Plus, Trash2, Calendar, Target, User, Clock } from 'lucide-react'
 import { TaskStep, OrderTask } from '@/types/task'
 import { TaskGanttPreview } from './task-gantt-preview'
+import { CategoryManager } from './category-manager'
+import { CalendarDatePicker } from './calendar-date-picker'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 
 // Helper to skip weekends
 const addWorkingDays = (date: Date, days: number): Date => {
@@ -77,6 +80,7 @@ export default function TaskBuilder() {
 
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false)
 
   // Update duration when dates change
   useEffect(() => {
@@ -254,18 +258,10 @@ export default function TaskBuilder() {
             />
           </div>
           <div>
-            <Label htmlFor="category">Kategori</Label>
-            <Select value={orderData.category} onValueChange={(value) => setOrderData(prev => ({ ...prev, category: value }))}>
-              <SelectTrigger>
-                <SelectValue placeholder="Pilih kategori" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="printing">Printing</SelectItem>
-                <SelectItem value="design">Design</SelectItem>
-                <SelectItem value="digital">Digital</SelectItem>
-                <SelectItem value="event">Event</SelectItem>
-              </SelectContent>
-            </Select>
+            <CategoryManager
+              selectedCategory={orderData.category}
+              onSelectCategory={(category) => setOrderData(prev => ({ ...prev, category }))}
+            />
           </div>
           <div>
             <Label htmlFor="priority">Prioritas</Label>

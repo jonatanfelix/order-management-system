@@ -41,16 +41,28 @@ export async function POST(request: Request) {
     }
 
     // Get category_id if category is a string (category name)
-    let categoryId = category
-    if (typeof category === 'string') {
+    let categoryId = null
+    if (category && typeof category === 'string') {
+      // Try to find existing category (case-insensitive)
       const { data: categoryData } = await supabase
         .from('categories')
         .select('id')
-        .eq('name', category)
+        .ilike('name', category)
         .single()
       
       if (categoryData) {
         categoryId = categoryData.id
+      } else {
+        // Create new category if not exists
+        const { data: newCategory, error: catError } = await supabase
+          .from('categories')
+          .insert({ name: category })
+          .select('id')
+          .single()
+        
+        if (newCategory && !catError) {
+          categoryId = newCategory.id
+        }
       }
     }
 
