@@ -120,7 +120,8 @@ export default function TaskBuilderV2() {
       return
     }
 
-    const taskId = Date.now().toString()
+    // Use temporary ID for frontend (will be replaced with UUID from database)
+    const taskId = `temp-${Date.now()}`
     const startDate = newTask.dependsOn?.length 
       ? calculateDependencyStartDate(newTask.dependsOn)
       : newTask.startDate || new Date()

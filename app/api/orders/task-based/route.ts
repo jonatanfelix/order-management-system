@@ -116,7 +116,8 @@ export async function POST(request: Request) {
       progress: task.progress,
       is_milestone: task.isMilestone,
       task_order: index + 1,
-      depends_on_tasks: task.dependsOn || [],
+      // TODO: Implement proper dependency mapping after tasks are created with real UUIDs
+      depends_on_tasks: [], // Temporarily disabled to avoid UUID error
       notes: task.notes
     }))
 
