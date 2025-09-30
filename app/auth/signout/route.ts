@@ -1,7 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
-export async function POST(request: NextRequest) {
+async function handleSignOut(request: NextRequest) {
   const supabase = await createClient()
 
   // Check if user is logged in
@@ -12,4 +12,12 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.redirect(new URL('/login', request.url))
+}
+
+export async function POST(request: NextRequest) {
+  return handleSignOut(request)
+}
+
+export async function GET(request: NextRequest) {
+  return handleSignOut(request)
 }

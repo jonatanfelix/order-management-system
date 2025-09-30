@@ -84,7 +84,7 @@ export default async function Dashboard() {
                 </Link>
               </Button>
               <Button asChild variant="outline">
-                <Link href="/guest/gantt">
+                <Link href="/guest/dashboard">
                   🌐 Guest Mode
                 </Link>
               </Button>

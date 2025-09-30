@@ -16,7 +16,8 @@ export async function signIn(formData: FormData): Promise<void> {
   const { error } = await supabase.auth.signInWithPassword(data)
 
   if (error) {
-    throw new Error(error.message)
+    // Redirect to login with error message instead of throwing
+    redirect(`/login?error=${encodeURIComponent('Email atau password salah')}`)
   }
 
   revalidatePath('/', 'layout')
@@ -39,7 +40,8 @@ export async function signUp(formData: FormData): Promise<void> {
   const { error } = await supabase.auth.signUp(data)
 
   if (error) {
-    throw new Error(error.message)
+    // Redirect to signup with error message instead of throwing
+    redirect(`/signup?error=${encodeURIComponent(error.message)}`)
   }
 
   revalidatePath('/', 'layout')

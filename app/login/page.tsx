@@ -4,7 +4,8 @@ import { Input } from '@/components/ui/input'
 import { signIn } from '@/lib/actions/auth'
 import Link from 'next/link'
 
-export default function LoginPage() {
+export default function LoginPage({ searchParams }: { searchParams: { error?: string } }) {
+  const errorMessage = searchParams.error
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
       <Card className="w-full max-w-md shadow-2xl border-2 border-slate-200">
@@ -15,6 +16,11 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="bg-white p-6">
+          {errorMessage && (
+            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm">
+              ⚠️ {errorMessage}
+            </div>
+          )}
           <form action={signIn} className="space-y-6">
             <div className="space-y-2">
               <label htmlFor="email" className="text-sm font-semibold text-slate-700">
