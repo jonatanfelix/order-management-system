@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Plus, Trash2, Calendar, Target, User, Clock, Edit2, Save, X, AlertCircle } from 'lucide-react'
 import { TaskStep, OrderTask } from '@/types/task'
-import { TaskGanttPreview } from './task-gantt-preview'
+import { GoogleCalendarTimeline } from './google-calendar-timeline'
 import { CategoryManager } from './category-manager'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 
@@ -622,14 +622,20 @@ export default function TaskBuilderV2() {
         </Card>
       )}
 
-      {/* Gantt Preview */}
+      {/* Google Calendar Preview */}
       {orderData.tasks.length > 0 && (
         <Card className="bg-white shadow-lg border-2 border-slate-200">
           <CardHeader>
-            <CardTitle>Preview Timeline</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              📅 Google Calendar Timeline Preview
+            </CardTitle>
+            <p className="text-sm text-slate-600 mt-1">
+              View: Bulan / Minggu / Agenda - Task bars otomatis span across dates
+            </p>
           </CardHeader>
           <CardContent>
-            <TaskGanttPreview tasks={orderData.tasks} />
+            <GoogleCalendarTimeline tasks={orderData.tasks} />
           </CardContent>
         </Card>
       )}
