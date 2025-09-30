@@ -127,45 +127,54 @@ export function TaskGanttPreview({ tasks }: TaskGanttPreviewProps) {
         </div>
       </div>
 
-      {/* Timeline Header */}
-      <div className="relative">
-        <div className="grid grid-cols-12 gap-1 mb-2">
-          {timeline.slice(0, 12).map((week, index) => (
-            <div key={index} className="text-xs text-center font-medium">
-              {week.start.toLocaleDateString('id-ID', { month: 'short', day: 'numeric' })}
-            </div>
-          ))}
-        </div>
-        
-        {/* Holiday markers */}
-        <div className="relative h-4 mb-4 border border-gray-200 rounded">
-          {Array.from({ length: totalDays }, (_, i) => {
+      {/* Timeline Header - Calendar Style */}
+      <div className="relative bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border-2 border-blue-200">
+        {/* Month/Week Headers */}
+        <div className="grid gap-1 mb-3" style={{ gridTemplateColumns: `repeat(${Math.min(totalDays, 60)}, minmax(0, 1fr))` }}>
+          {Array.from({ length: Math.min(totalDays, 60) }, (_, i) => {
             const date = new Date(timelineStart)
             date.setDate(date.getDate() + i)
-            const position = (i / totalDays) * 100
+            const isFirstOfMonth = date.getDate() === 1
+            const isSundayDate = isSunday(date)
+            const isToday = today.toDateString() === date.toDateString()
             
-            if (isSunday(date)) {
-              return (
-                <div
-                  key={i}
-                  className="absolute top-0 bottom-0 bg-red-200 border-r border-red-300 opacity-60"
-                  style={{ left: `${position}%`, width: `${100 / totalDays}%` }}
-                  title={`Minggu, ${date.toLocaleDateString('id-ID')}`}
-                />
-              )
-            }
-            return null
+            return (
+              <div
+                key={i}
+                className={`text-center ${
+                  isToday ? 'bg-red-500 text-white font-bold' :
+                  isSundayDate ? 'bg-red-100 text-red-700' :
+                  isFirstOfMonth ? 'bg-blue-100 text-blue-900 font-semibold' :
+                  'bg-white text-gray-700'
+                } rounded px-1 py-2 border ${
+                  isToday ? 'border-red-600' :
+                  isSundayDate ? 'border-red-300' :
+                  'border-gray-200'
+                }`}
+                title={date.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+              >
+                <div className="text-[10px] leading-tight">
+                  {isFirstOfMonth && (
+                    <div className="font-bold text-[9px] mb-0.5">
+                      {date.toLocaleDateString('id-ID', { month: 'short' })}
+                    </div>
+                  )}
+                  <div className={isToday ? 'font-bold' : ''}>{date.getDate()}</div>
+                  <div className="text-[8px] opacity-75">
+                    {date.toLocaleDateString('id-ID', { weekday: 'narrow' })}
+                  </div>
+                </div>
+              </div>
+            )
           })}
-          
-          {/* Today line */}
-          {todayPosition !== null && (
-            <div
-              className="absolute top-0 bottom-0 w-0.5 bg-red-600 z-10"
-              style={{ left: `${todayPosition}%` }}
-              title={`Hari ini: ${today.toLocaleDateString('id-ID')}`}
-            />
-          )}
         </div>
+        
+        {/* Today marker legend */}
+        {todayPosition !== null && (
+          <div className="text-xs text-center text-red-600 font-semibold mb-2">
+            📍 Hari Ini: {today.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+          </div>
+        )}
       </div>
 
       {/* Tasks */}
@@ -195,31 +204,29 @@ export function TaskGanttPreview({ tasks }: TaskGanttPreviewProps) {
                 </div>
               </div>
               
-              <div className="relative h-6 bg-gray-100 border border-gray-200 rounded ml-10">
+              <div className="relative h-8 bg-gray-100 border-2 border-gray-300 rounded-lg ml-10 overflow-hidden">
                 {/* Task bar */}
                 <div
-                  className={`absolute top-0 bottom-0 ${taskColor} rounded flex items-center justify-center text-white text-xs font-medium transition-all`}
+                  className={`absolute top-0 bottom-0 ${taskColor} rounded flex items-center justify-center text-white text-xs font-medium transition-all shadow-md`}
                   style={position}
                 >
                   {task.isMilestone ? (
-                    <Diamond className="h-3 w-3" />
+                    <Diamond className="h-4 w-4" />
                   ) : (
-                    <span className="truncate px-1">
-                      {task.progress > 0 ? `${task.progress}%` : ''}
-                    </span>
+                    <>
+                      {/* Progress bar inside */}
+                      {task.progress > 0 && (
+                        <div
+                          className="absolute left-0 top-0 bottom-0 bg-green-400 opacity-60"
+                          style={{ width: `${task.progress}%` }}
+                        />
+                      )}
+                      <span className="relative z-10 truncate px-2 font-semibold drop-shadow-md">
+                        {task.progress}%
+                      </span>
+                    </>
                   )}
                 </div>
-                
-                {/* Progress overlay */}
-                {!task.isMilestone && task.progress > 0 && task.progress < 100 && (
-                  <div
-                    className="absolute top-0 bottom-0 bg-green-500 rounded-r opacity-30"
-                    style={{
-                      left: position.left,
-                      width: `${parseFloat(position.width.replace('%', '')) * (task.progress / 100)}%`
-                    }}
-                  />
-                )}
                 
                 {/* Dependencies lines */}
                 {task.dependsOn.map(depId => {

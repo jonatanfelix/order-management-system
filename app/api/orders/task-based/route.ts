@@ -69,25 +69,57 @@ export async function POST(request: Request) {
       notes: task.notes || ''
     }))
 
-    // Use RPC function to create task-based order
-    const { data: orderId, error: createError } = await supabase
-      .rpc('create_task_based_order', {
-        p_title: title,
-        p_client_name: client || '',
-        p_category_id: categoryId,
-        p_priority: priority || 'normal',
-        p_tasks: JSON.stringify(transformedTasks),
-        p_created_by: user.id
+    // Create order directly without RPC function
+    const { data: order, error: orderError } = await supabase
+      .from('orders')
+      .insert({
+        title,
+        client_name: client || '',
+        category_id: categoryId,
+        status: 'DRAFT',
+        value_idr: 0,
+        is_task_based: true,
+        created_by: user.id
       })
+      .select()
+      .single()
 
-    if (createError) {
-      console.error('Error creating task-based order:', createError)
-      return NextResponse.json({ error: createError.message }, { status: 500 })
+    if (orderError || !order) {
+      console.error('Error creating order:', orderError)
+      return NextResponse.json({ error: orderError?.message || 'Failed to create order' }, { status: 500 })
+    }
+
+    // Insert tasks
+    const tasksToInsert = transformedTasks.map((task: any, index: number) => ({
+      order_id: order.id,
+      name: task.name,
+      pic: task.pic,
+      quantity: task.quantity,
+      unit: task.unit,
+      start_date: task.startDate,
+      end_date: task.endDate,
+      duration_days: task.duration,
+      progress: task.progress,
+      is_milestone: task.isMilestone,
+      task_order: index + 1,
+      depends_on_tasks: task.dependsOn || [],
+      notes: task.notes
+    }))
+
+    const { error: tasksError } = await supabase
+      .from('order_tasks')
+      .insert(tasksToInsert)
+
+    if (tasksError) {
+      console.error('Error creating tasks:', tasksError)
+      // Rollback: delete the order
+      await supabase.from('orders').delete().eq('id', order.id)
+      return NextResponse.json({ error: tasksError.message }, { status: 500 })
     }
 
     return NextResponse.json({ 
       success: true, 
-      orderId,
+      orderId: order.id,
       message: 'Task-based order created successfully' 
     })
 

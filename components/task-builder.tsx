@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -49,6 +50,7 @@ const calculateDuration = (start: Date, end: Date): number => {
 }
 
 export default function TaskBuilder() {
+  const router = useRouter()
   const [orderData, setOrderData] = useState<OrderTask>({
     title: '',
     client: '',
@@ -74,6 +76,7 @@ export default function TaskBuilder() {
   })
 
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
 
   // Update duration when dates change
   useEffect(() => {
@@ -168,6 +171,8 @@ export default function TaskBuilder() {
       return
     }
 
+    setIsSaving(true)
+
     try {
       const response = await fetch('/api/orders/task-based', {
         method: 'POST',
@@ -189,19 +194,40 @@ export default function TaskBuilder() {
         throw new Error(result.error || 'Failed to save order')
       }
 
-      alert('Pesanan berhasil disimpan!')
-      // Redirect to orders list or order detail
-      window.location.href = '/orders'
+      alert('✅ Pesanan berhasil disimpan!')
+      // Redirect to orders list
+      router.push('/orders')
     } catch (error) {
       console.error('Error saving order:', error)
-      alert(`Gagal menyimpan pesanan: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      alert(`❌ Gagal menyimpan pesanan: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setIsSaving(false)
     }
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      {/* Header */}
-      <Card>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-6">
+      <div className="container mx-auto px-4 space-y-6">
+        {/* Header with Back Button */}
+        <div className="flex items-center gap-4 mb-6">
+          <Button 
+            variant="outline" 
+            onClick={() => router.back()}
+            className="flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Kembali
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Buat Pesanan Baru</h1>
+            <p className="text-slate-600">Gunakan Task Builder untuk membuat pesanan dengan timeline</p>
+          </div>
+        </div>
+
+      {/* Header Card */}
+      <Card className="bg-white shadow-lg border-2 border-slate-200">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Target className="h-5 w-5" />
@@ -258,7 +284,7 @@ export default function TaskBuilder() {
       </Card>
 
       {/* Task Input Form */}
-      <Card>
+      <Card className="bg-white shadow-lg border-2 border-slate-200">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Plus className="h-5 w-5" />
@@ -367,16 +393,19 @@ export default function TaskBuilder() {
             />
           </div>
 
-          <Button onClick={addTask} className="w-full">
-            <Plus className="h-4 w-4 mr-2" />
-            Tambah Task
+          <Button 
+            onClick={addTask} 
+            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-6 text-lg shadow-lg hover:shadow-xl transition-all"
+          >
+            <Plus className="h-5 w-5 mr-2" />
+            ➕ Tambah Task ke Daftar
           </Button>
         </CardContent>
       </Card>
 
       {/* Task List */}
       {orderData.tasks.length > 0 && (
-        <Card>
+        <Card className="bg-white shadow-lg border-2 border-slate-200">
           <CardHeader>
             <CardTitle>Daftar Task ({orderData.tasks.length})</CardTitle>
           </CardHeader>
@@ -426,7 +455,7 @@ export default function TaskBuilder() {
 
       {/* Gantt Preview */}
       {orderData.tasks.length > 0 && (
-        <Card>
+        <Card className="bg-white shadow-lg border-2 border-slate-200">
           <CardHeader>
             <CardTitle>Preview Timeline</CardTitle>
           </CardHeader>
@@ -437,10 +466,34 @@ export default function TaskBuilder() {
       )}
 
       {/* Save Button */}
-      <div className="flex justify-end">
-        <Button onClick={saveOrder} className="px-8" disabled={!orderData.title.trim() || orderData.tasks.length === 0}>
-          Simpan Pesanan
+      <div className="flex justify-end gap-4">
+        <Button 
+          variant="outline"
+          onClick={() => router.back()}
+          className="px-8 py-6 text-lg"
+        >
+          Batal
         </Button>
+        <Button 
+          onClick={saveOrder} 
+          className="px-12 py-6 text-lg bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 shadow-lg hover:shadow-xl transition-all font-semibold" 
+          disabled={!orderData.title.trim() || orderData.tasks.length === 0 || isSaving}
+        >
+          {isSaving ? (
+            <>
+              <svg className="animate-spin h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Menyimpan...
+            </>
+          ) : (
+            <>
+              💾 Simpan Pesanan
+            </>
+          )}
+        </Button>
+      </div>
       </div>
     </div>
   )
