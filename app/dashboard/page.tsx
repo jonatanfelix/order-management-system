@@ -173,7 +173,7 @@ export default async function Dashboard() {
                         <div className="flex gap-2">
                           {/* Timeline Button */}
                           <Button size="sm" variant="outline" asChild>
-                            <Link href={`/orders/${order.id}/gantt`}>
+                            <Link href={profile ? `/orders/${order.id}/gantt` : `/guest/orders/${order.id}/gantt`}>
                               📊
                             </Link>
                           </Button>

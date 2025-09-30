@@ -146,8 +146,8 @@ export default function OrderEditForm({ order, tasks, categories, templates }: O
                 id="value_idr"
                 type="number"
                 step="1000"
-                value={orderData.value_idr}
-                onChange={(e) => setOrderData({...orderData, value_idr: parseInt(e.target.value)})}
+                value={orderData.value_idr || 0}
+                onChange={(e) => setOrderData({...orderData, value_idr: parseInt(e.target.value) || 0})}
                 required
                 placeholder="e.g., 10000000"
               />
