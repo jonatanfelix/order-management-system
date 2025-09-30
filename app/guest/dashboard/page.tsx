@@ -13,6 +13,7 @@ export default async function GuestDashboard() {
   const supabase = await createClient()
   
   // Fetch all orders (guest can see all for demo/public dashboard)
+  // Note: This requires RLS policies to allow public read access
   const { data: orders, error } = await supabase
     .from('orders')
     .select(`
@@ -26,6 +27,10 @@ export default async function GuestDashboard() {
     `)
     .order('created_at', { ascending: false })
     .limit(100)
+
+  if (error) {
+    console.error('Error fetching orders for guest dashboard:', error)
+  }
 
   const ordersList = orders || []
 

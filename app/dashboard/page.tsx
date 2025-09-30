@@ -77,17 +77,23 @@ export default async function Dashboard() {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <Button asChild>
-                <Link href="/orders/new">
-                  <PlusIcon className="h-4 w-4 mr-2" />
-                  Buat Order
-                </Link>
-              </Button>
+              {/* Only ADMIN and INPUTER can create orders */}
+              {(profile.role === 'ADMIN' || profile.role === 'INPUTER') && (
+                <Button asChild>
+                  <Link href="/orders/new">
+                    <PlusIcon className="h-4 w-4 mr-2" />
+                    Buat Order
+                  </Link>
+                </Button>
+              )}
+              
+              {/* All authenticated users can access guest mode */}
               <Button asChild variant="outline">
                 <Link href="/guest/dashboard">
                   🌐 Guest Mode
                 </Link>
               </Button>
+              
               <form action="/auth/signout" method="post">
                 <Button variant="ghost" type="submit">
                   Keluar
