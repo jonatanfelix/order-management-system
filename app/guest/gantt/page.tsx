@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { PlusIcon, TrashIcon, PrinterIcon, ShareIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, TrashIcon, PrinterIcon, ShareIcon, ArrowLeftIcon } from '@heroicons/react/24/outline'
+import Link from 'next/link'
 
 interface ProcessStep {
   id: number
@@ -119,13 +120,20 @@ export default function GuestGanttPage() {
       <div className="bg-white shadow border-b">
         <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-4">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900">
-                📊 Gantt Chart Generator (Guest Mode)
-              </h1>
-              <p className="text-sm text-slate-600">
-                Buat timeline proyek tanpa perlu login
-              </p>
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/guest/dashboard">
+                  <ArrowLeftIcon className="h-4 w-4" />
+                </Link>
+              </Button>
+              <div>
+                <h1 className="text-2xl font-bold text-slate-900">
+                  📊 Gantt Chart Generator (Guest Mode)
+                </h1>
+                <p className="text-sm text-slate-600">
+                  Buat timeline proyek tanpa perlu login
+                </p>
+              </div>
             </div>
             <div className="flex gap-2">
               <Button size="sm" onClick={exportToImage}>
