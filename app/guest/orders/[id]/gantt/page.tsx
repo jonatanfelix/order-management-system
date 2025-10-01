@@ -8,8 +8,8 @@ import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 import { TaskStep } from '@/types/task'
 
-export default async function GuestGanttPage({ params }: { params: { id: string } }) {
-  const { id } = params
+export default async function GuestGanttPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const supabase = await createClient()
 
   // Get order with tasks
@@ -57,7 +57,7 @@ export default async function GuestGanttPage({ params }: { params: { id: string 
           <div className="flex items-center justify-between py-4">
             <div className="flex items-center">
               <Button variant="ghost" size="sm" asChild className="mr-4">
-                <Link href={`/guest/orders/${id}`}>
+                <Link href="/dashboard">
                   <ArrowLeft className="h-4 w-4" />
                 </Link>
               </Button>
@@ -109,8 +109,8 @@ export default async function GuestGanttPage({ params }: { params: { id: string 
                     Order ini belum memiliki task timeline.
                   </p>
                   <Button asChild variant="outline">
-                    <Link href={`/guest/orders/${id}`}>
-                      ← Kembali ke Order
+                    <Link href="/dashboard">
+                      ← Kembali ke Dashboard
                     </Link>
                   </Button>
                 </div>

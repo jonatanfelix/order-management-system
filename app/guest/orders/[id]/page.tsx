@@ -9,12 +9,13 @@ import { notFound } from 'next/navigation'
 import { getStatusLabel, getStatusColor } from '@/lib/constants/status'
 
 interface OrderDetailPageProps {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 export default async function GuestOrderDetailPage({ params }: OrderDetailPageProps) {
+  const { id } = await params
   const supabase = await createClient()
 
   // Get order details
@@ -25,7 +26,7 @@ export default async function GuestOrderDetailPage({ params }: OrderDetailPagePr
       categories (name, description),
       profiles!orders_created_by_fkey (name, email)
     `)
-    .eq('id', params.id)
+    .eq('id', id)
     .single()
 
   if (orderError || !order) {
@@ -36,7 +37,7 @@ export default async function GuestOrderDetailPage({ params }: OrderDetailPagePr
   const { data: tasks = [] } = await supabase
     .from('order_tasks')
     .select('*')
-    .eq('order_id', params.id)
+    .eq('order_id', id)
     .order('task_order')
 
   // Calculate progress
@@ -80,7 +81,7 @@ export default async function GuestOrderDetailPage({ params }: OrderDetailPagePr
           <div className="flex items-center justify-between py-6">
             <div className="flex items-center">
               <Button variant="ghost" size="sm" asChild className="mr-4">
-                <Link href="/guest/dashboard">
+                <Link href="/dashboard">
                   <ArrowLeftIcon className="h-4 w-4" />
                 </Link>
               </Button>
@@ -103,7 +104,7 @@ export default async function GuestOrderDetailPage({ params }: OrderDetailPagePr
               {/* Timeline Button - only show if has tasks */}
               {isTaskBased && tasksList.length > 0 && (
                 <Button variant="outline" size="sm" asChild>
-                  <Link href={`/guest/orders/${params.id}/gantt`}>
+                  <Link href={`/guest/orders/${id}/gantt`}>
                     📊 Timeline
                   </Link>
                 </Button>
