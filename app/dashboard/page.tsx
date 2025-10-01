@@ -40,7 +40,14 @@ export default async function Dashboard() {
     ordersQuery = ordersQuery.eq('created_by', user.id)
   }
 
-  const { data: orders } = await ordersQuery
+  const { data: orders, error: ordersError } = await ordersQuery
+  
+  // Log error for debugging
+  if (ordersError) {
+    console.error('Dashboard orders query error:', ordersError)
+    console.error('User:', user?.id, 'Role:', profile?.role)
+  }
+  
   const ordersList = orders || []
 
   const formatCurrency = (amount: number) => {
