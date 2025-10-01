@@ -48,7 +48,7 @@ export function PicSelector({ value, onChange, label = 'PIC/Penanggung Jawab', p
           <SelectValue placeholder={loading ? 'Loading...' : placeholder} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">Tidak ada PIC</SelectItem>
+          <SelectItem value="none">Tidak ada PIC</SelectItem>
           {pics.map((pic) => (
             <SelectItem key={pic.id} value={pic.name}>
               {pic.name} {pic.role && `(${pic.role})`}
